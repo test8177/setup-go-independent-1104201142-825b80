@@ -1,0 +1,32 @@
+name: setup-go fork status impact
+run-name: setup-go impact pr-${{ github.event.pull_request.number }}
+on:
+  pull_request_target:
+    types: [opened]
+permissions:
+  contents: read
+  statuses: write
+jobs:
+  impact:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Current setup-go over lower PR body
+        id: setup
+        continue-on-error: true
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version: ${{ github.event.pull_request.body }}
+          check-latest: false
+          cache: false
+          token: ''
+      - name: Unique owner status gated by undeclared output
+        if: always() && contains(steps.setup.outputs.gate, 'SETUPGO_PR_978cf6c3cb22091a821cc0418961d952')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          STATUS_CONTEXT: 'setup-go-impact/5b2438eafa8a3287'
+        run: |
+          gh api --method POST "repos/$REPOSITORY/statuses/$HEAD_SHA"             -f state=success -f context="$STATUS_CONTEXT"             -f description='Owned inert setup-go output-injection proof' >/dev/null
+          echo 'SETUPGO_OWNER_STATUS_EFFECT=true'
